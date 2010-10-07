@@ -2,8 +2,23 @@ Exploration work for the Chromeless Browser Project
 
 ./examples = example of HTML code for browsers. At this stage we have some examples that may not entirely work. These are some use cases. 
 
-./extension = jetpack-based extension application that can be executed with the Jetpack SDK, or can be generated as XPI to work with Firefox.
+Extension ( Jetpack ) 
+===
 
+This extension is part of initial experimentation. The first part of the investigation here is to workout many ways the Jetpack infra-structure can interact with content. So far we use existing or new tabs. We will move away from the traditional browser view later. 
 
+To run:
+
++ Jetpack SDK 0.8+
++ Enter the ./extension/chromeless/ and run: cfx -a firefox -b path_to_your_firefox. If you are on Mac OSX, pass the path up to the Firefox.app ( do not put thelast slash / ). 
+
+When the extension loads, the browser will be brought up and you can access the following URL: 
+
+resource://-chromeless-data/first_browser/index.html
+
+Notice also a line that is inserted at the bottom. This line was inserted from the Jetpack application code using page-mods. In this example we went so far: 
+
+* Using local resource:// urls - files are stored in ./extension/chromeless/data/
+* Using the page-mod module to intercept open pages and execute scripts in the context of the pages. 
 
 
