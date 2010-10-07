@@ -1,0 +1,8 @@
+{
+    "id": "", 
+    "dependencies": [
+        "jetpack-core"
+    ], 
+    "description": "Remix the Browser", 
+    "author": "Marcio - for Chromeless Project"  
+}

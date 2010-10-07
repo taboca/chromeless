@@ -1,1 +1,9 @@
-Exploration work 
+Exploration work for the Chromeless Browser Project 
+
+./examples = example of HTML code for browsers. At this stage we have some examples that may not entirely work. These are some use cases. 
+
+./extension = jetpack-based extension application that can be executed with the Jetpack SDK, or can be generated as XPI to work with Firefox.
+
+
+
+
