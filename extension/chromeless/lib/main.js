@@ -52,10 +52,14 @@ exports.main = function(options, callbacks) {
      browser elements the HTML page has. 
      
      Ref: Window = http://127.0.0.1:8888/#module/core/windows
-
+ 
+     TODO - dump the content of the loaded page in the new window
+	//console.log(window.tabs.body.innerHTML);
+ 
   */
 
 
+/*
   var windows = require("windows").browserWindows;
   //windows.openWindow("resource://-chromeless-data/first_browser/index.html");
   windows.openWindow({
@@ -63,9 +67,29 @@ exports.main = function(options, callbacks) {
     onOpen: function(window) {
       // do stuff like listen for content
       // loading.
-	console.log(window.body.innerHTML);
     }
   });
+*/
+
+  /* 
+ 
+     Passing Parameters to the Jetpack App via Command Line 
+ 
+     Ref: https://bugzilla.mozilla.org/show_bug.cgi?id=599181 - if one 
+     wants to pass parameters to the Jetpack app via command line. We 
+     can use this to engage with browser example a or b, so far. 
+
+     Code in cfx: http://hg.mozilla.org/labs/jetpack-sdk/rev/74f38f55420d 
+
+     The parameter usage is: 
+
+     cfx run -a firefox -b ~marciogalli/Desktop/MozillaDeveloperPreview.app --static-args {\"browser\":\"resource://-chromeless-data/first_browser/index.html"\"}
+
+
+  */
+
+   var call = options.staticArgs;
+   console.log(call.browser);
 
 }
 
