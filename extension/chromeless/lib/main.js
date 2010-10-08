@@ -19,6 +19,25 @@ exports.main = function(options, callbacks) {
   }));
 
 
+  /* Page worker is a hidden browser */
+  /* a Jetpack app can use page worker to create a hidden browser.  
+     there is also a system in plact to pass messages between the page 
+     and the Jetpack - see postMessage. */ 
+
+  var pageWorkers = require("page-worker");
+  var script = "postMessage(document.body.innerHTML)";
+
+  var page = pageWorkers.Page({
+    contentURL: "http://en.wikipedia.org/wiki/Internet",
+    contentScript: script,
+    contentScriptWhen: "ready",
+    onMessage: function(message) {
+      console.log(message);
+    }
+  });
+
+  pageWorkers.add(page);
+
 }
 
 
