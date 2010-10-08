@@ -59,7 +59,6 @@ exports.main = function(options, callbacks) {
   */
 
 
-/*
   var windows = require("windows").browserWindows;
   //windows.openWindow("resource://-chromeless-data/first_browser/index.html");
   windows.openWindow({
@@ -69,7 +68,6 @@ exports.main = function(options, callbacks) {
       // loading.
     }
   });
-*/
 
   /* 
  
@@ -84,7 +82,8 @@ exports.main = function(options, callbacks) {
      The parameter usage is: 
 
      cfx run -a firefox -b ~marciogalli/Desktop/MozillaDeveloperPreview.app --static-args {\"browser\":\"resource://-chromeless-data/first_browser/index.html"\"}
-
+ 
+    
 
   */
 

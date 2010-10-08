@@ -1,0 +1,6 @@
+{
+    "configs": {
+        "ff4": ["-a", "firefox", "-b", "~marciogalli/Desktop/MozillaDeveloperPreview.app", "--static-args","{\"browser\":\"resource://-chromeless-data/first_browser/index.html\"}"]
+    }
+}
+
