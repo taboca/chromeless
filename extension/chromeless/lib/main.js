@@ -62,7 +62,7 @@ exports.main = function(options, callbacks) {
   var windows = require("windows").browserWindows;
   //windows.openWindow("resource://-chromeless-data/first_browser/index.html");
   windows.openWindow({
-    url: "resource://-chromeless-data/first_browser/index.html",
+    url: "resource://-chromeless-data/drag_browsers/index.html",
     onOpen: function(window) {
       // do stuff like listen for content
       // loading.
