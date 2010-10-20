@@ -7,4 +7,4 @@ print "Will open the browser script ="+ browserToLaunch
 
 # now let's run the cfx thingy and specify the app-kit main module
 # as our starting point
-os.system("jetpack-sdk/bin/cfx -a xulrunner -b ~marciogalli/Desktop/Firefox3.6.1.app -t ./template/app-extension-new --static-args {\\\"browser\\\":\\\""+ browserToLaunch+"\\\"} -p \"chromeless\" run")
+os.system("jetpack-sdk/bin/cfx -a xulrunner -t ./template/app-extension-new --static-args {\\\"browser\\\":\\\""+ browserToLaunch+"\\\"} -p \"chromeless\" run")
