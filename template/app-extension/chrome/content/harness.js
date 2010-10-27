@@ -64,6 +64,8 @@
 // to be installed and uninstalled without needing to reboot the
 // application being extended.
 
+dump("harness running!\n");
+
 const Cc = Components.classes;
 const Ci = Components.interfaces;
 const Cu = Components.utils;
@@ -589,100 +591,39 @@ function getDefaults(rootFileSpec) {
           logError: logError};
 }
 
-// Everything below is only used on Gecko 1.9.2 or below.
+// TODO: This doesn't actually work.  we must figure out
+// how to get the harness service running in this context
+// (included by xul content) rather than the component
+// context.
+{
+    var rootFileSpec = fileSpec.parent.parent;
+    var defaults = getDefaults(rootFileSpec);
+    var HarnessService = buildHarnessService(rootFileSpec,
+                                             defaults.dump,
+                                             defaults.logError,
+                                             defaults.onQuit,
+                                             defaults.options);
 
-function NSGetModule(compMgr, fileSpec) {
-  var rootFileSpec = fileSpec.parent.parent;
-  var defaults = getDefaults(rootFileSpec);
-  var HarnessService = buildHarnessService(rootFileSpec,
-                                           defaults.dump,
-                                           defaults.logError,
-                                           defaults.onQuit,
-                                           defaults.options);
-  return XPCOMUtils.generateModule([HarnessService]);
+    var factory = HarnessService.prototype._xpcom_factory;
+    var proto = HarnessService.prototype;
+
+    // We want to keep this factory around for the lifetime of
+    // the addon so legacy code with access to Components can
+    // access the addon if needed.
+    manager.registerFactory(proto.classID,
+                            proto.classDescription,
+                            proto.contractID,
+                            factory);
+
+    var harnessService = factory.createInstance(null, Ci.nsISupports);
+    harnessService = harnessService.wrappedJSObject;
+
+    gHarness = {
+        service: harnessService,
+        classID: proto.classID,
+        contractID: proto.contractID,
+        factory: factory
+    };
+} catch(e) {
+    dump(e);
 }
-
-// Program life-cycle events originate in bootstrap.js on 1.9.3.  But 1.9.2
-// doesn't use bootstrap.js, so we need to do a little extra work there to
-// determine the reasons for app startup and shutdown.  That's what this
-// singleton is for.  On 1.9.3 all methods are no-ops.
-var lifeCycleObserver192 = {
-  get loadReason() {
-    if (this._inited) {
-      // If you change these names, change them in bootstrap.js too.
-      if (this._addonIsNew)
-        return "install";
-      return "startup";
-    }
-    return undefined;
-  },
-
-  get unloadReason() {
-    if (this._inited) {
-      // If you change these names, change them in bootstrap.js too.
-      switch (this._emState) {
-      case "item-uninstalled":
-        return "uninstall";
-      case "item-disabled":
-        return "disable";
-      }
-      return "shutdown";
-    }
-    return undefined;
-  },
-
-  // This must be called first to initialize the singleton.  It must be called
-  // before profile-after-change.
-  init: function lifeCycleObserver192_init(bundleID, logError) {
-    // This component is present in 1.9.2 but not 1.9.3.
-    if ("@mozilla.org/extensions/manager;1" in Cc && !this._inited) {
-      // Need an event that's sent before the HarnessService is loaded but after
-      // the preferences service is available.  profile-after-change works.
-      obSvc.addObserver(this, "profile-after-change", true);
-      obSvc.addObserver(this, "em-action-requested", true);
-      this._bundleID = bundleID;
-      this._logError = logError;
-      this._inited = true;
-    }
-  },
-
-  unload: function lifeCycleObserver192_unload() {
-    if (this._inited && !this._unloaded) {
-      obSvc.removeObserver(this, "em-action-requested");
-      delete this._logError;
-      this._unloaded = true;
-    }
-  },
-
-  observe: function lifeCycleObserver192_observe(subj, topic, data) {
-    try {
-      if (topic === "profile-after-change") {
-        obSvc.removeObserver(this, topic);
-        try {
-          // This throws if the pref doesn't exist, which is the case when no
-          // new add-ons were installed.
-          var addonIdStr = Cc["@mozilla.org/preferences-service;1"].
-                           getService(Ci.nsIPrefBranch).
-                           getCharPref("extensions.newAddons");
-        }
-        catch (err) {}
-        if (addonIdStr) {
-          var addonIds = addonIdStr.split(",");
-          this._addonIsNew = addonIds.indexOf(this._bundleID) >= 0;
-        }
-      }
-      else if (topic === "em-action-requested") {
-        if (subj instanceof Ci.nsIUpdateItem && subj.id === this._bundleID)
-          this._emState = data;
-      }
-    }
-    catch (err) {
-      this._logError(err);
-    }
-  },
-
-  QueryInterface: XPCOMUtils.generateQI([
-    Ci.nsIObserver,
-    Ci.nsISupportsWeakReference,
-  ])
-};
