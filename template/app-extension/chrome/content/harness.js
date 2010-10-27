@@ -64,8 +64,6 @@
 // to be installed and uninstalled without needing to reboot the
 // application being extended.
 
-dump("harness running!\n");
-
 const Cc = Components.classes;
 const Ci = Components.interfaces;
 const Cu = Components.utils;
@@ -78,6 +76,9 @@ const obSvc = Cc["@mozilla.org/observer-service;1"]
 const ioSvc = Cc["@mozilla.org/network/io-service;1"]
               .getService(Ci.nsIIOService);
 
+// XXX: we only care about running under xulrunner, we needen't
+// embed guids for various apps, we needen't have conditional code for
+// them either.
 const FIREFOX_ID = "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}";
 const THUNDERBIRD_ID = "{3550f703-e582-4d05-9a08-453d09bdfdc6}";
 const FENNEC_ID = "{a23983c0-fd0e-11dc-95ff-0800200c9a66}";
@@ -357,8 +358,6 @@ function buildHarnessService(rootFileSpec, dump, logError,
 
       obSvc.removeObserver(this, "quit-application-granted");
 
-      lifeCycleObserver192.unload();
-
       // Notify the program of unload.
       if (program) {
         if (typeof(program.onUnload) === "function") {
@@ -401,7 +400,6 @@ function buildHarnessService(rootFileSpec, dump, logError,
             obSvc.addObserver(this, "final-ui-startup", true);
             break;
           }
-          lifeCycleObserver192.init(options.bundleID, logError);
           break;
         case "final-ui-startup": // XULRunner
         case "sessionstore-windows-restored": // Firefox
@@ -459,8 +457,6 @@ function buildDevQuit(options, dump) {
   }
 
   return function onQuit(result) {
-    dump(result + "\n");
-
     function writeResult() {
       if (!fileWritten)
         try {
@@ -595,8 +591,13 @@ function getDefaults(rootFileSpec) {
 // how to get the harness service running in this context
 // (included by xul content) rather than the component
 // context.
-{
-    var rootFileSpec = fileSpec.parent.parent;
+try {
+    var rootFileSpec = Cc["@mozilla.org/file/local;1"]
+        .createInstance(Ci.nsILocalFile);
+    // XXX: need to get a path?
+    // why do things seem to work without a path?
+    // wtf? 
+
     var defaults = getDefaults(rootFileSpec);
     var HarnessService = buildHarnessService(rootFileSpec,
                                              defaults.dump,
@@ -610,6 +611,7 @@ function getDefaults(rootFileSpec) {
     // We want to keep this factory around for the lifetime of
     // the addon so legacy code with access to Components can
     // access the addon if needed.
+    var manager = Components.manager.QueryInterface(Ci.nsIComponentRegistrar);
     manager.registerFactory(proto.classID,
                             proto.classDescription,
                             proto.contractID,
@@ -618,6 +620,7 @@ function getDefaults(rootFileSpec) {
     var harnessService = factory.createInstance(null, Ci.nsISupports);
     harnessService = harnessService.wrappedJSObject;
 
+    harnessService.load("startup");
     gHarness = {
         service: harnessService,
         classID: proto.classID,
