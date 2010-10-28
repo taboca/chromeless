@@ -4,8 +4,9 @@
 # accepts a single argument on the command line which is the path to the
 # "entry point HTML" - that which should be used as the browser's UI.
 
-import os,sys,re
+import os,sys
 
+# given a filename argument, return an absolute path
 def findBrowserHTML(path):
     # "ui" directory can be omitted, but we'll automatically append it to
     # verify that file exists.
@@ -14,22 +15,7 @@ def findBrowserHTML(path):
     if os.path.isdir(path):
         path = os.path.join(path, "index.html")
     # the path we return must have ui omitted
-    return re.sub('^ui(?:[\\/])', '', path)
-
-# determine the directory where this script resides, from this, we'll
-# make lotsa assumptions
-script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-interface_directory = "impl/packages/chromeless/data"
-ui_directory = os.path.join(script_dir, "ui")
-
-# now because this is a demo, and lloyd is an idiot, we'll just
-# symlink user interface files from ui into the bowels of packages
-# where the app-kit main file lives
-if os.path.lexists(interface_directory):
-    if not os.path.islink(interface_directory):
-        raise interface_directory + " exists and is not a symlink.  please remove that bugger"
-else:
-    os.symlink(ui_directory, interface_directory)
+    return os.path.abspath(path)
 
 # be flexible in handling the first argument
 browserToLaunch = "first_browser/index.html"
@@ -39,9 +25,17 @@ except:
     pass
 browserToLaunch = findBrowserHTML(browserToLaunch)
 
-print "Will open the browser html ="+ browserToLaunch
+# throw an error message if we can't figure out what html file
+# is the browser's HTML entry point
+if not os.path.exists(browserToLaunch):
+    print >>sys.stderr, "can't find browser HTML (tried '"+browserToLaunch+"')"
+    raise SystemExit(1)
+
+print "Will open the browser HTML = "+ browserToLaunch
 print "You can also try other scripts such as ./run ui/thumbnails/index.html"
 
 # now let's run the cfx thingy and specify the app-kit main module
 # as our starting point
-os.system("impl/bin/cfx -a xulrunner -t ./template/app-extension --static-args {\\\"browser\\\":\\\""+ browserToLaunch+"\\\"} -p \"impl/packages/chromeless\" run")
+os.system("impl/bin/cfx -a xulrunner -t ./template/app-extension " + \
+          "--static-args {\\\"browser\\\":\\\""+ browserToLaunch+"\\\"} " + \
+          "-p \"impl/packages/chromeless\" run")

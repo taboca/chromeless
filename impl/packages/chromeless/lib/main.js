@@ -65,7 +65,10 @@ function requireForBrowser( safe_module ) {
 exports.main = function main(options) {
     var call = options.staticArgs;
 
-    console.log("Loading browser using = " + call.browser);
+    // convert browser url into a file url
+    var startPage = require('url').fromFilename(call.browser)
+
+    console.log("Loading browser using = " + startPage);
 
     // XXX: we need to turn call.browser into a fully qualified uri...
 
@@ -81,9 +84,7 @@ exports.main = function main(options) {
        can change it when they set inner document width and height */
 
     appWindow = new contentWindow.Window({
-        // XXX: yes, this will not work for you, I know.  this is an experimental
-        // branch, after all, isn't it?
-        url: "file:///home/lth/dev/chromeless/ui/first_browser/index.html", 
+        url: startPage, 
         width: 800,
         height: 600,
         onStartLoad: injectLabVars
