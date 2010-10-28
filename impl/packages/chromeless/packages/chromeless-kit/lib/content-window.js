@@ -78,8 +78,7 @@ function Window(options) {
            .getService(Ci.nsIWindowWatcher);
   var url = "data:application/vnd.mozilla.xul+xml," + escape(blankXul);
 
-  var features = ["chrome",
-                  "width=" + options.width,
+  var features = ["width=" + options.width,
                   "height=" + options.height,
                   "centerscreen"];
 
