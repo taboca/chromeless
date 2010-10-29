@@ -53,10 +53,8 @@ function injectLabVars(window) {
     /* This may go away - we expose a bunch of things in the developers HTML browser so far and we will revisit this, possibly keep the HTML browser safe and ask que HTML browser developer to message the upper app through a whitelisted require API */ 
 
     window.wrappedJSObject.packaging = packaging;
-    window.wrappedJSObject.require = function(fname) {
-        console.log("webbyfox content requires: " + fname);
-        return require(fname);
-    };
+    window.wrappedJSObject.require = requireForBrowser;
+
     // everyone needs a console.log, printf debugging at its finest.
     window.wrappedJSObject.console = {
         log: function(msg) {
@@ -69,7 +67,8 @@ function injectLabVars(window) {
 }
 
 function requireForBrowser( safe_module ) { 
-	return require;
+    console.log("webbyfox content requires: " + safe_module);
+	  return require(safe_module);
 } 
 
 exports.main = function main(options) {

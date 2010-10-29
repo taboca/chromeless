@@ -11,11 +11,15 @@ var blankXul = ('<?xml version="1.0"?>' +
                 '</window>');
 
 function Injector(browser, onStartLoad) {
-  memory.track(this);
-
-  browser.addProgressListener(this,
+    memory.track(this);
+    
+    browser.addProgressListener(this,
                               Ci.nsIWebProgress.NOTIFY_STATE_DOCUMENT);
-  this._onStartLoad = onStartLoad;
+    this._onStartLoad = onStartLoad;
+
+    // running under the assumption that we only want to inject once,
+    // this flag ensures that XXX: needs review
+    this._haveRun = false;
 }
 
 Injector.prototype = {
@@ -46,7 +50,7 @@ Injector.prototype = {
       // Firebug's XHTML workaround here.
       var safeName = this._safeGetName(aRequest);
       var window = aWebProgress.DOMWindow;
-      if (window && window.wrappedJSObject &&
+      if (!this._haveRun && window && window.wrappedJSObject &&
           (safeName == "about:layout-dummy-request" ||
            safeName == "about:document-onload-blocker")) {
         // TODO: Firebug's code mentions that about:blank causes strange
@@ -54,9 +58,10 @@ Injector.prototype = {
         // though.
 
         try {
-          this._onStartLoad.call(undefined, window);
+            this._onStartLoad.call(undefined, window);
+            this._haveRun = true;
         } catch (e) {
-          console.exception(e);
+            console.exception(e);
         }
       }
     }
