@@ -1,1 +1,3 @@
 manifest chrome/chrome.manifest
+manifest chrome/browser.manifest
+manifest chrome/en-US.manifest 
