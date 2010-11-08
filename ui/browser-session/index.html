@@ -27,10 +27,11 @@ history governance to it.
 
      <!-- this insertion gives us a more richer browser implementation --> 
      <link rel="stylesheet" href="browser.css"/>
+     <script src="status.js"></script>
   </head>
   <body onload="" >
 
-  <form><input id="awesomeBox" type="text" value="http://www.nytimes.com" /><input type="button" onclick="launch();return false" value="go"/></form>
+  <form><input id="awesomeBox" type="text" value="http://www.google.com" /><input type="button" onclick="launch();return false" value="go"/></form>
 
   <button onclick="init();return false">Init</button>
   <button onclick="back();return false">Back</button>
@@ -78,6 +79,7 @@ history governance to it.
 	var browser = document.getElementById("content");
 	sessionStore.init(browser);
         historyControls.init(browser);
+	initStatus();
     } 
     function back() { 
         historyControls.back();

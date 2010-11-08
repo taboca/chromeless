@@ -44,7 +44,7 @@ const LAB_TITLE = "Mozilla Application Kit";
 
 // This is temporary, we are temporaily exposing this to the HTML developer browser, so we can continue to test the tabbrowser element and session store til we figure out and keep things things here in this main app context. Search for Ci, we current expose Ci to the developers HTML browser. 
 
-const {Ci,Cc} = require("chrome");
+const {Ci,Cc,Cr} = require("chrome");
 
 //var tabBrowser = require("tab-browser");
 var simpleFeature = require("simple-feature");
@@ -59,6 +59,7 @@ function injectLabVars(window) {
   window.packaging = packaging;
   window.Ci = Ci;
   window.Cc = Cc;
+  window.Cr = Cr;
 
   /*
   window.wrappedJSObject.packaging = packaging;
