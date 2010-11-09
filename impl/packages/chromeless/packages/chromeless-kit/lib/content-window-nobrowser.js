@@ -2,6 +2,12 @@ let {Cc, Ci} = require("chrome");
 
 var xpcom = require("xpcom");
 
+/* We want to observe when the iframe inner documents are created 
+   but before the DOMContentLoad event. This is an event outside 
+   the scope of the inner, iframes, window's events */
+
+var observers = require("observer-service");
+
 var xulNs = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 
 var blankXul = ('<?xml version="1.0"?>' +
@@ -10,66 +16,19 @@ var blankXul = ('<?xml version="1.0"?>' +
                 '<window xmlns="' + xulNs + '">' +
                 '</window>');
 
-function Injector(browser, onStartLoad) {
-  memory.track(this);
-
-  browser.addProgressListener(this,
-                              Ci.nsIWebProgress.NOTIFY_STATE_DOCUMENT);
-  this._onStartLoad = onStartLoad;
-}
-
-Injector.prototype = {
-  QueryInterface : xpcom.utils.generateQI([Ci.nsIWebProgressListener,
-                                           Ci.nsISupportsWeakReference]),
-
-  // Taken from Firebug' content/firebug/tabWatcher.js.
-  _safeGetName: function(request) {
-    try {
-      return request.name;
-    } catch (exc) {
-      return null;
-    }
-  },
-
-  // Much of this is taken from Firebug's content/firebug/tabWatcher.js,
-  // specifically the FrameProgressListener object.
-  onStateChange : function (aWebProgress, aRequest,
-                            aStateFlags,  aStatus) {
-    if (aStateFlags & Ci.nsIWebProgressListener.STATE_IS_REQUEST) {
-      // We need to get the hook in as soon as the new DOMWindow is
-      // created, but before it starts executing any scripts in the
-      // page.  After lengthy analysis, it seems that the start of
-      // these "dummy" requests is the only state that works.
-
-      // TODO: Firebug's code mentions that XHTML doesn't dispatch
-      // any of these dummy requests, so we should probably use the
-      // Firebug's XHTML workaround here.
-      var safeName = this._safeGetName(aRequest);
-      var window = aWebProgress.DOMWindow;
-      if (window && window.wrappedJSObject &&
-          (safeName == "about:layout-dummy-request" ||
-           safeName == "about:document-onload-blocker")) {
-        // TODO: Firebug's code mentions that about:blank causes strange
-        // behavior here; I don't think it should apply to our use case,
-        // though.
-
-        try {
-          this._onStartLoad.call(undefined, window);
-        } catch (e) {
-          console.exception(e);
-        }
-      }
-    }
-  },
-
-  // Stubs for the nsIWebProgressListener interfaces which we don't use.
-  onProgressChange : function() { },
-  onLocationChange : function() { },
-  onStatusChange   : function() { },
-  onSecurityChange : function() { }
-};
-
 var windows = [];
+
+
+function gDocumentCreatedCallback(subject, data) { 
+  subject.top = subject.self; 
+  subject.__defineSetter__("self",function () {
+       console.log("self called!");
+  } );
+  subject.__defineSetter__("top",function () {
+       console.log("top called!");
+  } );
+  console.log(subject +" is subject and data is "+ data);
+} 
 
 function Window(options) {
   memory.track(this);
@@ -86,10 +45,9 @@ function Window(options) {
   if (options.titleBar == false)
     features.push("titlebar=no");
 
-  /* We now pass the options.url, which is the user app directly 
-  inserting it in the window, instead using the xul browser element 
-  that was here. This helped to make the session history work. 
-  */
+
+  /* https://developer.mozilla.org/en/Observer_Notifications */
+  observers.add("content-document-global-created", gDocumentCreatedCallback );
 
   var window = ww.openWindow(null, options.url, null, features.join(","), null);
   
