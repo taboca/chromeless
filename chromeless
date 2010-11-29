@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+
+# A small script to invoke cfx from the jetpack platform with proper arguments.
+# accepts a single argument on the command line which is the path to the
+# "entry point HTML" - that which should be used as the browser's UI.
+
+import os,sys
+
+# set the cuddlefish "root directory" for this process if it's not already
+# set in the environment
+cuddlefish_root = os.path.dirname(os.path.abspath(sys.argv[0]))
+
+if 'CUDDLEFISH_ROOT' not in os.environ:
+    os.environ['CUDDLEFISH_ROOT'] = cuddlefish_root
+
+# set the "build directory", where we'll output built artifacts, download xulrunner,
+# etc.
+build_dir = os.path.join(cuddlefish_root, "build")
+
+# add our own python-lib path to the python module search path.
+python_lib_dir = os.path.join(cuddlefish_root, "impl")
+if python_lib_dir not in sys.path:
+    sys.path.append(python_lib_dir)
+
+# now export to env so sub-processes get it too
+if 'PYTHONPATH' not in os.environ:
+    os.environ['PYTHONPATH'] = python_lib_dir
+elif python_lib_dir not in os.environ['PYTHONPATH'].split(os.pathsep):
+    paths = os.environ['PYTHONPATH'].split(os.pathsep)
+    paths.insert(0, python_lib_dir)
+    os.environ['PYTHONPATH'] = os.pathsep.join(paths)
+
+# given a filename argument, return an absolute path
+def findBrowserHTML(path):
+    # "examples" directory can be omitted, but we'll automatically append it to
+    # verify that file exists.
+    if not os.path.exists(path):
+        path = os.path.join("examples", path)
+    if os.path.isdir(path):
+        path = os.path.join(path, "index.html")
+    # the path we return must have ui omitted
+    return os.path.abspath(path)
+
+# be flexible in handling the first argument
+browserToLaunch = "first_browser/index.html"
+try:
+    browserToLaunch = sys.argv[1]
+except:
+    pass
+browserToLaunch = findBrowserHTML(browserToLaunch)
+
+executionMode = "run" 
+try: 
+  if sys.argv[2] == "package":
+    executionMode = "xpi" 
+    print "Packaging your application for distribution or installation..."
+    print "Note: expect a chromeless.zip application generated in this directory; "
+    print "Note: use xulrunner --install-app full_path_to-chromeless.zip to install;  "
+except: 
+  pass
+
+# throw an error message if we can't figure out what html file
+# is the browser's HTML entry point
+if not os.path.exists(browserToLaunch):
+    print >>sys.stderr, "can't find browser HTML (tried '"+browserToLaunch+"')"
+    raise SystemExit(1)
+
+import mozfetcher
+f = mozfetcher.Fetcher(build_dir)
+if (f.needs_fetch()):
+    print "Missing prerequisites!  I must download xulrunner to run.  Doing so"
+    f.run()
+
+print "Using Browser HTML at '%s'" % browserToLaunch
+
+import cuddlefish
+import simplejson as json
+
+# now let's run the cfx thingy and specify the app-kit main module
+# as our starting point
+cuddlefish.run([
+        executionMode,
+        "-a", "xulrunner",
+        "-b", f.xulrunner_path(),
+        "-t", "./template",
+        "--static-args", json.dumps({"browser": browserToLaunch}),
+        "-p", "packages/chromeless"
+        ])
+
+
+

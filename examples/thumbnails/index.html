@@ -1,0 +1,250 @@
+<!-- This webpage controls the top level rendering of the browser.  it's
+     the first document that is loaded. and defines the look and feel of
+     the browser.  --> 
+
+<html>
+  <head>
+    <!-- What if the title of the top level document dictated the os level
+         process/application name? -->
+    <title>WebbyFox</title>
+
+<!-- we can use basic flexbox layout! -->
+    <style type="text/css" media="screen">
+
+body {
+  background-color: #999;
+  padding: 0;
+  margin: 0;
+}
+
+#browserHeader {
+  width: 100%;
+  text-align: center;
+}
+
+#browserHeader form { 
+   margin-bottom:5px;
+} 
+#awesomeBox {
+  font-size: 120%;
+  margin-right: 20px;
+  width:240px;
+}
+
+#browserContentArea {
+  -moz-box-flex: 1;
+  -webkit-box-flex: 1;
+  box-flex: 1;
+  display: -moz-box;
+  display: -webkit-box;
+  display: box;
+  border: 1px solid green;
+  margin:1em;
+  margin-top:0;
+}
+
+
+#outer {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  display: -moz-box;
+  display: -webkit-box;
+  display: box;
+  -moz-box-orient: vertical;
+  -webkit-box-orient: vertical;
+  box-orient: vertical;
+}
+
+.browser { 
+  border: 1px solid blue;
+  box-flex: 1;
+  -moz-box-flex: 1;
+  -webkit-box-flex: 1;
+  width: 100%;
+  height: 100%;
+} 
+
+.browser_selected { 
+  display:block;
+} 
+
+.browser_hidden { 
+  display:none;
+} 
+
+#thumbsNavigator { 
+	width:800px;
+	height:40px;
+	overflow:hidden;
+} 
+
+.thumb_img { 
+   -moz-transition-property: width;
+   -moz-transition-duration: .5s;
+   -moz-transition-delay: .5s;
+   width:32px;
+   height:32px;
+   opacity:.6;
+   margin-left:5px;;
+   overflow:hidden;
+} 
+
+.thumb_img:hover { 
+   -moz-transition-property: width;
+   -moz-transition-duration: .5s;
+   -moz-transition-delay: 0s;
+   height:32px;
+   width:240px;
+} 
+
+.thumb_selected { 
+   -moz-transition-property: opacity;
+   -moz-transition-duration: .5s;
+    opacity:1;
+   -moz-transition-delay: 0s;
+   width:240px;
+   height:40px;
+} 
+    </style>
+  </head>
+  <body>
+    <div id="outer">
+    <div id="browserHeader">
+        <form>
+	<input id="awesomeBox"  type="text" value="http://www.google.com" />
+	<input type="submit" id="buttonGo"  value="go"></input>
+	<button id="buttonNew" >New</button>
+	<button id="buttonPersist" >All</button>
+	</form>
+    </div>
+    <div id="thumbsNavigator">
+
+    </div>
+    <div id="browserContentArea">
+      <!-- what if iframes were how the browser HTML embedded web content?
+           what if a new attribute were introduced which controlled priviledge
+           level of content loaded in an iframe? --> 
+    </div>
+    </div>
+  </body>
+  <!-- Could the browser itself leverage a framework like YUI or jquery?
+       This shouldn't be that much different than slamming YUI into node.js
+       or jquery into jetpacks? -->
+  <script type="text/javascript" src="jquery-min.js"></script>
+  <script type="text/javascript">
+
+var currentBrowser = null; 
+var browserTabs = new Array();
+
+var console = require("plain-text-console");
+dump =  new console.PlainTextConsole();
+
+// If you want to try different browser implementations, replace iframe with the 
+// correct DOM element. 
+
+function makeBrowser() { 
+  var browser = document.createElement("iframe");
+  $(browser).addClass("browser");
+  return browser;
+} 
+
+var currSelected = null; 
+
+function selectBrowser(browserRef) { 
+  $(".browser").removeClass("browser_selected");
+  $(".browser").addClass("browser_hidden");
+  $(browserRef).removeClass("browser_hidden");
+  $(browserRef).addClass("browser_selected");
+
+  var refBrowserId = $(browserRef).attr("id");
+  var uniqueId = refBrowserId.split("browser_unique_")[1];
+  if(currSelected != null) { 
+    document.getElementById("thumb_unique_"+currSelected).setAttribute("class","thumb");
+  } 
+  document.getElementById("thumb_unique_"+uniqueId).setAttribute("class","thumb thumb_selected");
+  currSelected = uniqueId; 
+} 
+
+function canvasShot(browserRef, thumbImageRef) { 
+  if(!browserRef) browserRef = currentBrowser;
+  try { 
+
+  var camera = require("canvas-proxy");
+  thumbImageRef.width="1";
+  thumbImageRef.height="1";
+  thumbImageRef.src=camera.snapshot(browserRef);
+  } catch (i) { 
+    alert(i); 
+  } 
+} 
+
+function newTab() { 
+  var newBrowser = makeBrowser();
+  browserTabs.push(newBrowser);
+  var uniqueId = Math.random();
+  var browserUnique = "browser_unique_"+uniqueId;
+  
+  newBrowser.setAttribute("id",browserUnique);
+
+  // experimental onload to sync thumbnails, 
+  // we may need to send another events for the full onload 
+  // since this 'experimental-dom-loaded' is before scripts 
+  // and images.  
+
+  require("iframe-as-browser").bind(newBrowser,document);
+
+  newBrowser.addEventListener("experimental-dom-load",function (e) { 
+      setTimeout(function() { syncTabs(browserUnique); }, 1000);
+  },true);
+
+
+  var thumb = document.createElement("span");
+
+  var img = document.createElement("img");
+  thumb.setAttribute("class","thumb");
+  img.setAttribute("class","thumb_img");
+
+  img.width="60";
+  img.height="60";
+  img.setAttribute("onclick","selectBrowser(document.getElementById('browser_unique_"+uniqueId+"'))");
+  thumb.setAttribute("id","thumb_unique_"+uniqueId);
+  img.setAttribute("id","image_unique_"+uniqueId);
+  thumb.appendChild(img);
+
+  document.getElementById("thumbsNavigator").appendChild(thumb);
+  document.getElementById("browserContentArea").appendChild(newBrowser);
+
+  selectBrowser(newBrowser);
+  currentBrowser = newBrowser;
+
+} 
+
+function syncTabs(refBrowserId) { 
+  var uniqueId = refBrowserId.split("browser_unique_")[1];
+  canvasShot(document.getElementById(refBrowserId),document.getElementById("image_unique_"+uniqueId));
+} 
+
+$(document).ready(function() {
+    $("#browserHeader form").submit(function(e) {
+       if(browserTabs.length<1) newTab();  
+       browserUniqueId = $(".browser_selected").attr("id");
+       var url = $.trim($("#awesomeBox").val());
+        $(".browser_selected").attr("src", url);
+        return false; 
+    });
+    $("#browserHeader #buttonNew").click(function(e) {
+        newTab();
+        $("#awesomeBox").val("");
+        $("#awesomeBox").focus();
+        return false; 
+    });
+    $("#browserHeader #buttonPersist").click(function(e) {
+        $(".browser").removeClass("browser_hidden");
+        return false; 
+
+    });
+});
+
+  </script>
+</html>
