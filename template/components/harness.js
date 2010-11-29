@@ -542,9 +542,9 @@ function getDefaults(rootFileSpec) {
     options = JSON.parse(jsonData);
     if ("staticArgs" in options) { 
       options.staticArgs = JSON.parse(options.staticArgs);
-      if(options.staticArgs.browserRelative) { 
+      if(options.staticArgs.browser_embeded_path) { 
         dirbase = rootFileSpec.clone();
-        options.staticArgs.browser=dirbase.path+"/"+options.staticArgs.browserRelative;
+        options.staticArgs.browser=dirbase.path+"/"+options.staticArgs.browser_embeded_path;
       } 
     } 
   } catch (e) {

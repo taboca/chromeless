@@ -47,10 +47,12 @@ except:
     pass
 
 executionMode = "run" 
+browserArgument ="browser"
 
 try: 
   if sys.argv[2] == "package":
     executionMode = "xpi" 
+    browserArgument ="browser_embeded_path"
     print "Packaging your application for distribution or installation..."
     print "Note: expect a chromeless.zip application generated in this directory; "
     print "Note: use xulrunner --install-app full_path_to-chromeless.zip to install;  "
@@ -75,33 +77,12 @@ print "Using Browser HTML at '%s'" % browserToLaunch
 import cuddlefish
 import simplejson as json
 
-# now let's run the cfx thingy and specify the app-kit main module
-# as our starting point
-def copy_package_file(file_src, file_dst):
-    for file in os.listdir(file_src):
-            print "Copying file: %s" % file
-            shutil.copy(os.path.join(file_src, file), os.path.join(file_dst, file))
-
-if executionMode == "run":
-  cuddlefish.run([
+cuddlefish.run([
         executionMode,
         "-a", "xulrunner",
         "-b", f.xulrunner_path(),
         "-t", "./template",
-        "--static-args", json.dumps({"browser": browserToLaunch}),
-        "-p", "packages/chromeless"
-        ])
-else:
-  splitfilename = browserToLaunch.split("/");
-  stripdir = browserToLaunch.split("/"+splitfilename[len(splitfilename)-1])[0]
-  os.makedirs("./template/"+stripdir);
-  copy_package_file(stripdir,"./template/"+stripdir); 
-  cuddlefish.run([
-        executionMode,
-        "-a", "xulrunner",
-        "-b", f.xulrunner_path(),
-        "-t", "./template",
-        "--static-args", json.dumps({"browserRelative": browserToLaunch}),
+        "--static-args", json.dumps({browserArgument: browserToLaunch}),
         "-p", "packages/chromeless"
         ])
 

@@ -62,6 +62,7 @@ exports.main = function main(options) {
 
     var protocol = require("custom-protocol").register("chromeless");
     protocol.setHost("main", require('url').fromFilename(directory), "system");
+    console.log("Launching browser from:"+require('url').fromFilename(directory));
 
     var contentWindow = require("chromeless-sandbox-window");
 
