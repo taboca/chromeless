@@ -1,3 +1,0 @@
-content branding jar:browser.jar!/content/branding/ xpcnativewrappers=yes
-content browser jar:browser.jar!/content/browser/ xpcnativewrappers=yes contentaccessible=yes
-~                                                                             
