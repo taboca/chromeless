@@ -41,6 +41,8 @@
 // here in this main app context. Search for Ci, we current expose Ci
 // to the developers HTML browser.
 
+
+
 const {Ci,Cc} = require("chrome");
 
 var appWindow = null; 
@@ -51,13 +53,21 @@ function requireForBrowser(moduleName) {
 }
 
 exports.main = function main(options) {
+
     var call = options.staticArgs;
+
+    var stripDirectory = call.browser.split("/"); 
+    var pageName = stripDirectory[stripDirectory.length-1]; 
+    var directory = call.browser.split("/"+pageName)[0];
+
+    var protocol = require("custom-protocol").register("chromeless");
+    protocol.setHost("main", require('url').fromFilename(directory), "system");
+    console.log("Launching browser from:"+require('url').fromFilename(directory));
 
     var contentWindow = require("chromeless-sandbox-window");
 
     // convert browser url into a file url
     console.log("Path base = "+call.appBasePath); 
-
     console.log("Browser path = " +call.browser); 
     var launchUrl = call.browser;
     if(call.appBasePath) { 
