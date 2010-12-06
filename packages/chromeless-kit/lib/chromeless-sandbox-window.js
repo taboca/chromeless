@@ -35,15 +35,21 @@ observers.add("content-document-global-created", function(subject, url) {
             //subject.window.dispatchEvent(evt);
 
             // this is a top level iframe
+
             subject.window.top = subject.window.self;
             subject.window.parent = subject.window.self;
+
         }
         else
         {
             // this is a frame nested underneat the top level frame  
             subject.window.top = subject.window.parent.top;
         }
-    }
+    } else { 
+
+
+
+    } 
 });
 
 function Window(options) {
@@ -76,6 +82,15 @@ function Window(options) {
           window[name] = this.options.injectProps[name];
       }
   }
+
+  window.addEventListener("load", function (e) { 
+      e.target.body.addEventListener("DOMNodeInserted",function (e) { 
+        if(e.target.nodeName=="IFRAME") { 
+           require("iframe-as-browser").bind(e.target,window.document);
+        } 
+      }, true );
+  }, false);
+
 }
 
 Window.prototype = {

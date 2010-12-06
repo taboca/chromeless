@@ -103,7 +103,7 @@ body {
 } 
     </style>
   </head>
-  <body>
+  <body onload="test()">
     <div id="outer">
     <div id="thumbsNavigator">
     </div>
@@ -131,28 +131,6 @@ body {
   <script type="text/javascript">
 
 var misc = require("misc");
-
-function trackIframe(e) { 
-
-
-dump.log("iframe tracked.." + e.target.nodeName); 
-
-if(e.target.nodeName=="IFRAME") { 
-
-  require("iframe-as-browser").bind(e.target,document);
-  newBrowser = e.target; 
-
-  newBrowser.addEventListener("experimental-dom-load",function (e) {
-	var refBrowser = newBrowser.getAttribute("id");
-      setTimeout(function() { syncTabs(refBrowser); }, 1000);
-  },true);
-  newBrowser.addEventListener("experimental-dom-security", function (e) {
-      $("#awesomeBox").attr("class","security_"+e.detail);
-  },false);
-
-}
-
-} 
 
 
 var currentBrowser = null; 
@@ -211,6 +189,13 @@ function newTab() {
   var browserUnique = "browser_unique_"+uniqueId;
   
   newBrowser.setAttribute("id",browserUnique);
+
+  newBrowser.addEventListener("experimental-dom-load",function (e) {
+      setTimeout(function() { syncTabs(browserUnique); }, 1000);
+  },true);
+  newBrowser.addEventListener("experimental-dom-security", function (e) {
+      $("#awesomeBox").attr("class","security_"+e.detail);
+  },false);
 
   // experimental onload to sync thumbnails, 
   // we may need to send another events for the full onload 
