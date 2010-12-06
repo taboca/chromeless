@@ -131,6 +131,30 @@ body {
   <script type="text/javascript">
 
 var misc = require("misc");
+
+function trackIframe(e) { 
+
+
+dump.log("iframe tracked.." + e.target.nodeName); 
+
+if(e.target.nodeName=="IFRAME") { 
+
+  require("iframe-as-browser").bind(e.target,document);
+  newBrowser = e.target; 
+
+  newBrowser.addEventListener("experimental-dom-load",function (e) {
+	var refBrowser = newBrowser.getAttribute("id");
+      setTimeout(function() { syncTabs(refBrowser); }, 1000);
+  },true);
+  newBrowser.addEventListener("experimental-dom-security", function (e) {
+      $("#awesomeBox").attr("class","security_"+e.detail);
+  },false);
+
+}
+
+} 
+
+
 var currentBrowser = null; 
 var browserTabs = new Array();
 
@@ -193,15 +217,7 @@ function newTab() {
   // since this 'experimental-dom-loaded' is before scripts 
   // and images.  
 
-  require("iframe-as-browser").bind(newBrowser,document);
 
-  newBrowser.addEventListener("experimental-dom-load",function (e) { 
-      var refBrowser = browserUnique; 
-      setTimeout(function() { syncTabs(refBrowser); }, 1000);
-  },true);
-  newBrowser.addEventListener("experimental-dom-security", function (e) {
-      $("#awesomeBox").attr("class","security_"+e.detail);
-  },false);
 
   var thumb = document.createElement("span");
 
@@ -262,6 +278,8 @@ function fishEye(e) {
 } 
 
 $(document).ready(function() {
+    
+    document.body.addEventListener("DOMNodeInserted",function (e) { trackIframe(e) } ,true);
 
     //document.getElementById("thumbsNavigator").addEventListener("mousemove",fishEye, false); 
     $("#thumbsNavigator").mousemove(function(event) { 
