@@ -60,15 +60,19 @@ simple browser based on them.  You may also specify an alternate browser HTML on
 
 From here, you can inspect the implementation of any of these samples, copy, modify and explore.
 
-Finally, it's possible to generate a ZIP package of your HTML browser which is an installable
-XULRunner application (danger, experimental):
+For deployment or to share your application, you can use chromeless to generate a standalone
+application folder, that anyone on a supported platform can run.  Output will be placed
+in the build/ directory:
 
-    (win32) C:\xxx\chromeless> chromeless examples\webgl package
-    (osx)   $ ./chromeless examples/webgl package
+    (win32) C:\xxx\chromeless> chromeless appify examples\webgl
+    (osx)   $ ./chromeless appify examples/webgl
 
-This will output a zip file. You can then use the built in XULRunner to install the ZIP file as a XULRunner application in your computer. There is a convenience script to install chromeless.zip in the local computer. In Mac OSX, look for the application under Applications/Mozilla/Chromeless. With Linux under /usr/lib/mozilla/chromeless and in Windows in C:\Program Files\Mozilla\Chromeless. If you want to change the vendor name, you should edit the ./template application.ini file.  
+Finally, it's possible to generate a "XULRunner application", which is a folder that is much
+smaller than a standalone application, but can be run under (a specific version of) xulrunner.
+Again, the output will be placed in the build/ directory:
 
-    ./xulapp-install 
+    (win32) C:\xxx\chromeless> chromeless  package examples\webgl
+    (osx)   $ ./chromeless package examples/webgl 
 
 ## More Information
 
@@ -77,6 +81,13 @@ will be a tutorial and API documentation.
 
 You can always find us on irc in `#labs` at `irc.mozilla.org`, or get help or discuss
 this project on our mailing list: `mozilla-labs@googlegroups.com`
+
+## Notes and Known Issues
+
+  * You need to pass a relative path to your application when you invoke chromeless script 
+  * This version only packages your files that are under your main application directory. So if you use, for example, jquery in a sub-directory, it will not be bundled. Make sure you have all your files in the same directory. 
+  * With Mac OSX, if you launch the application for tests ( not passing package option ), the keyboard output will show in the console and not in the browser screen. For Mac OSX, you may need to use the "package" argument and install in your machine. 
+  * It works with some specific versions of XULRunner. And to help out developers, the chromeless script will fetch a XULRunner SDK. 
 
 ## LICENSE
 

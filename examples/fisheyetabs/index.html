@@ -8,7 +8,7 @@
          process/application name? -->
     <title>WebbyFox</title>
 
-<!-- we can use basic flexbox layout! -->
+    <!-- we can use basic flexbox layout! -->
     
     <link href="security.css" rel="stylesheet" media="screen, projection">
     <style type="text/css" media="screen">
@@ -19,18 +19,35 @@ body {
   margin: 0;
 }
 
+#topCanvasMask { 
+     background-image: -moz-linear-gradient(-90deg, rgba(255,255,255,0) , #fff);
+     height:62px;
+     width:100%;
+} 
+
 #browserHeader {
-  width: 100%;
+  width: 80%;
+  height:40px;
+  margin:1em;
+  margin-top:0;
+  padding-top:10px;
   text-align: center;
+  background-color:white;
 }
 
 #browserHeader form { 
-   margin-bottom:5px;
+  display:-moz-inline-box;
+  -moz-box-orient:horizontal;
 } 
+
+.toolbarItem { 
+  -moz-box-flex: 1;
+} 
+
 #awesomeBox {
   font-size: 120%;
-  margin-right: 20px;
-  width:240px;
+  width:450px;
+  -moz-box-flex:2;
 }
 
 #browserContentArea {
@@ -40,11 +57,10 @@ body {
   display: -moz-box;
   display: -webkit-box;
   display: box;
-  border: 1px solid green;
   margin:1em;
   margin-top:0;
+  overflow:hidden;
 }
-
 
 #outer {
   margin: 0;
@@ -59,11 +75,11 @@ body {
 }
 
 .browser { 
-  border: 1px solid blue;
   box-flex: 1;
   -moz-box-flex: 1;
   -webkit-box-flex: 1;
   width: 100%;
+  border:0px; 
   height: 100%;
 } 
 
@@ -84,38 +100,37 @@ body {
 
 .thumb_img { 
    opacity:.6;
+   -moz-box-shadow: 0px 5px 15px black;
    width:30px; 
    height:30px
 } 
 
 .thumb { 
    border:2px solid transparent;
- overflow:hidden;
+  -moz-box-shadow:0 0 0;
+   overflow:hidden;
 } 
 
 .thumb_selected { 
-   -moz-transition-property: opacity;
-   -moz-transition-duration: .5s;
-    opacity:1;
-   -moz-transition-delay: 0s;
-   width:240px;
-   height:40px;
+  -moz-box-shadow:0 0 20px white;
 } 
     </style>
   </head>
   <body onload="test()">
     <div id="outer">
+    <div id="topCanvasMask">
     <div id="thumbsNavigator">
+    </div>
     </div>
     <div id="browserHeader">
         <form>
-	<input id="awesomeBox"  type="text" value="http://www.google.com" />
-	<input type="submit" id="buttonGo"  value="go"></input>
-	<button id="buttonNew" >New</button>
-	<button id="buttonHome" >Home</button>
-	<button id="buttonPersist" >All</button>
-	<button id="buttonFull" >Full</button>
-	</form>
+	<input class="toolbarItem" id="awesomeBox"  type="text" value="http://www.google.com" />
+	<input class="toolbarItem" type="submit" id="buttonGo"  value="go"></input>
+	<button class="toolbarItem" id="buttonNew" >New</button>
+	<button class="toolbarItem" id="buttonHome" >Home</button>
+	<button class="toolbarItem" id="buttonPersist" >All</button>
+	<button class="toolbarItem" id="buttonFull" >Full</button>
+        </form>
     </div>
     <div id="browserContentArea">
       <!-- what if iframes were how the browser HTML embedded web content?
@@ -135,6 +150,7 @@ var misc = require("misc");
 
 var currentBrowser = null; 
 var browserTabs = new Array();
+var currSelected = null; 
 
 var console = require("plain-text-console");
 var dump =  new console.PlainTextConsole();
@@ -148,9 +164,8 @@ function makeBrowser() {
   return browser;
 } 
 
-var currSelected = null; 
+function changeBrowser(browserRef,updateBar) { 
 
-function selectBrowser(browserRef) { 
   $(".browser").removeClass("browser_selected");
   $(".browser").addClass("browser_hidden");
   $(browserRef).removeClass("browser_hidden");
@@ -161,8 +176,13 @@ function selectBrowser(browserRef) {
   if(currSelected != null) { 
     document.getElementById("thumb_unique_"+currSelected).setAttribute("class","thumb");
   } 
-  document.getElementById("thumb_unique_"+uniqueId).setAttribute("class","thumb thumb_selected");
+  document.getElementById("image_unique_"+uniqueId).setAttribute("class","thumb thumb_selected");
   currSelected = uniqueId; 
+
+  if(updateBar) { 
+    $("#awesomeBox").attr("value",browserRef.src); 
+  } 
+
 } 
 
 function canvasShot(browserRef, thumbImageRef) { 
@@ -203,6 +223,22 @@ function newTab() {
   // and images.  
 
 
+  newBrowser.addEventListener("experimental-dom-load",function (e) { 
+      var refBrowser = browserUnique; 
+      $("#awesomeBox").attr("value",e.target.src); 
+      thumbnailUpdate(e.target.getAttribute("id")); 
+  },false);
+
+  newBrowser.addEventListener("experimental-dom-progress", function (e) {
+      $("#awesomeBox").attr("style","background: url(bg.png) "+parseInt(e.percentage*42)+"px 0px no-repeat");
+      if(e.percentage>90) { 
+          thumbnailUpdate(e.target.getAttribute("id"));
+      } 
+  },false);
+
+  newBrowser.addEventListener("experimental-dom-security", function (e) {
+      $("#awesomeBox").attr("class","security_"+e.detail);
+  },false);
 
   var thumb = document.createElement("span");
 
@@ -213,7 +249,7 @@ function newTab() {
 
   img.width="30";
   img.height="30";
-  img.setAttribute("onclick","selectBrowser(document.getElementById('browser_unique_"+uniqueId+"'))");
+  img.setAttribute("onclick","changeBrowser(document.getElementById('browser_unique_"+uniqueId+"'),true)");
   thumb.setAttribute("id","thumb_unique_"+uniqueId);
   img.setAttribute("id","image_unique_"+uniqueId);
   thumb.appendChild(img);
@@ -222,13 +258,17 @@ function newTab() {
   document.getElementById("browserContentArea").appendChild(newBrowser);
 
   tabsFixed=32*tabsIndex;
+ 
+  changeBrowser(newBrowser);
 
-  selectBrowser(newBrowser);
   currentBrowser = newBrowser;
 
 } 
 
-function syncTabs(refBrowserId) { 
+function updateVisibleBrowser(browserRef) { 
+} 
+
+function thumbnailUpdate(refBrowserId) { 
   var uniqueId = refBrowserId.split("browser_unique_")[1];
   canvasShot(document.getElementById(refBrowserId),document.getElementById("image_unique_"+uniqueId));
 } 
@@ -274,18 +314,16 @@ $(document).ready(function() {
 	fishEyeOut(event);
     });
 
-    //document.getElementById("thumbsNavigator").addEventListener("mouseout",fishEyeOut, false); 
-
     $("#browserHeader form").submit(function(e) {
        if(browserTabs.length<1) newTab();  
        browserUniqueId = $(".browser_selected").attr("id");
        var url = $.trim($("#awesomeBox").val());
-        $(".browser_selected").attr("src", misc.fixupuri(url));
-        return false; 
+       $(".browser_selected").attr("src", misc.fixupuri(url));
+       return false; 
     });
     $("#browserHeader #buttonHome").click(function(e) {
 
-        $(".browser_selected").attr("src", misc.fixupuri("http://www.google.com"));
+        $(".browser_selected").attr("src", misc.fixupuri("http://mozillalabs.com"));
         return false; 
     });
     $("#browserHeader #buttonNew").click(function(e) {

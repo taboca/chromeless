@@ -2,6 +2,11 @@ import sys
 import os
 import optparse
 import glob
+import platform
+import appifier
+import subprocess
+import signal
+import tempfile
 
 from copy import copy
 import simplejson as json
@@ -15,14 +20,13 @@ on your system. Please specify one using the -b/--binary option.
 """
 
 UPDATE_RDF_FILENAME = "%s.update.rdf"
-XPI_FILENAME = "%s.zip"
 
 usage = """
 %prog [options] [command]
 
 Package-Specific Commands:
   xpcom      - build xpcom component
-  xpi        - generate an xpi
+  package    - generate a stanalone xulrunner app directory
   test       - run tests
   run        - run program
 
@@ -54,9 +58,9 @@ parser_options = {
     ("-k", "--extra-packages",): dict(dest="extra_packages",
                                       help=("extra packages to include, "
                                             "comma-separated. Default is "
-                                            "'addon-kit'."),
+                                            "'chromeless-kit'."),
                                       metavar=None,
-                                      default="addon-kit"),
+                                      default="chromeless-kit"),
     ("-p", "--pkgdir",): dict(dest="pkgdir",
                               help=("package dir containing "
                                     "package.json; default is "
@@ -76,19 +80,6 @@ parser_options = {
     }
 
 parser_groups = Bunch(
-    xpi=Bunch(
-        name="XPI Options",
-        options={
-            ("-u", "--update-url",): dict(dest="update_url",
-                                          help="update URL in install.rdf",
-                                          metavar=None,
-                                          default=None),
-            ("-l", "--update-link",): dict(dest="update_link",
-                                           help="generate update.rdf",
-                                           metavar=None,
-                                           default=None),
-            }
-        ),
     app=Bunch(
         name="Application Options",
         options={
@@ -282,28 +273,6 @@ def test_all_packages(env_root, defaults):
         pkg_cfg=pkg_cfg,
         defaults=defaults)
 
-def run_development_mode(env_root, defaults):
-    pkgdir = os.path.join(env_root, 'packages', 'development-mode')
-    app = defaults['app']
-
-    from cuddlefish import server
-    port = server.DEV_SERVER_PORT
-    httpd = server.make_httpd(env_root, port=port)
-    thread = server.threading.Thread(target=httpd.serve_forever)
-    thread.setDaemon(True)
-    thread.start()
-
-    print "I am starting an instance of %s in development mode." % app
-    print "From a separate shell, you can now run cfx commands with"
-    print "'-r' as an option to send the cfx command to this instance."
-    print "All logging messages will appear below."
-
-    os.environ['JETPACK_DEV_SERVER_PORT'] = str(port)
-    options = {}
-    options.update(defaults)
-    run(["run", "--pkgdir", pkgdir],
-        defaults=options, env_root=env_root)
-
 def get_config_args(name, env_root):
     local_json = os.path.join(env_root, "local.json")
     if not (os.path.exists(local_json) and
@@ -329,6 +298,17 @@ def get_config_args(name, env_root):
         sys.exit(1)
     return config
 
+def killProcessByName(name):
+    for line in os.popen("ps xa"):
+        fields = line.split()
+        pid = fields[0]
+        process = " ".join(fields[4:])
+
+        if process.find(name) != -1:
+            print "killing pid: %s" % pid
+            os.kill(int(pid), signal.SIGHUP)
+            break
+
 def run(arguments=sys.argv[1:], target_cfg=None, pkg_cfg=None,
         defaults=None, env_root=os.environ.get('CUDDLEFISH_ROOT')):
     parser_kwargs = dict(arguments=arguments,
@@ -348,9 +328,6 @@ def run(arguments=sys.argv[1:], target_cfg=None, pkg_cfg=None,
 
     command = args[0]
 
-    if command == "develop":
-        run_development_mode(env_root, defaults=options.__dict__)
-        return
     if command == "testpkgs":
         test_all_packages(env_root, defaults=options.__dict__)
         return
@@ -363,27 +340,12 @@ def run(arguments=sys.argv[1:], target_cfg=None, pkg_cfg=None,
     elif command == "testcfx":
         test_cfx(env_root, options.verbose)
         return
-    elif command == "docs":
-        import subprocess
-        import time
-        import cuddlefish.server
-
-        print "One moment."
-        popen = subprocess.Popen([sys.executable,
-                                  cuddlefish.server.__file__,
-                                  'daemonic'])
-        # TODO: See if there's actually a way to block on
-        # a particular event occurring, rather than this
-        # relatively arbitrary/generous amount.
-        time.sleep(cuddlefish.server.IDLE_WEBPAGE_TIMEOUT * 2)
-        return
     elif command == "sdocs":
-        import cuddlefish.server
-
-        # TODO: Allow user to change this filename via cmd line.
-        filename = 'jetpack-sdk-docs.tgz'
-        cuddlefish.server.generate_static_docs(env_root, filename)
-        print "Wrote %s." % filename
+        import docgen
+        import chromeless
+        dirname = os.path.join(chromeless.Dirs().build_dir, "docs")
+        docgen.generate_static_docs(env_root, dirname)
+        print "Created docs in %s." % dirname
         return
 
     target_cfg_json = None
@@ -430,7 +392,9 @@ def run(arguments=sys.argv[1:], target_cfg=None, pkg_cfg=None,
             module_name=xpcom.module
             )
         sys.exit(0)
-    elif command == "xpi":
+    elif command == "package":
+        use_main = True
+    elif command == "appify":
         use_main = True
     elif command == "test":
         if 'tests' not in target_cfg:
@@ -457,7 +421,7 @@ def run(arguments=sys.argv[1:], target_cfg=None, pkg_cfg=None,
     # TODO: Consider keeping a cache of dynamic UUIDs, based
     # on absolute filesystem pathname, in the root directory
     # or something.
-    if command in ('xpi', 'run'):
+    if command in ('package', 'run', 'appify'):
         from cuddlefish.preflight import preflight_config
         if target_cfg_json:
             config_was_ok, modified = preflight_config(
@@ -561,71 +525,83 @@ def run(arguments=sys.argv[1:], target_cfg=None, pkg_cfg=None,
 
     retval = 0
 
-    if options.templatedir:
-        app_extension_dir = os.path.abspath(options.templatedir)
+    a = appifier.Appifier()
+
+    if command == 'package':
+        browser_code_path = json.loads(options.static_args)["browser"]
+        a.output_xul_app(browser_code=browser_code_path,
+                         harness_options=harness_options,
+                         dev_mode=False)
+
+    elif command == 'appify':
+        browser_code_path = json.loads(options.static_args)["browser"]
+        a.output_application(browser_code=browser_code_path,
+                             harness_options=harness_options,
+                             dev_mode=False)
+      
     else:
-        mydir = os.path.dirname(os.path.abspath(__file__))
-        if sys.platform == "darwin":
-            # If we're on OS X, at least point into the XULRunner
-            # app dir so we run as a proper app if using XULRunner.
-            app_extension_dir = os.path.join(mydir, "Test App.app",
-                                             "Contents", "Resources")
-        else:
-            app_extension_dir = os.path.join(mydir, "app-extension")
+        # on OSX we must invoke xulrunner from within a proper .app bundle,
+        # otherwise many basic application features will not work.  For instance
+        # keyboard focus and mouse interactions will be broken.
+        # for this reason, on OSX we'll actually generate a full standalone
+        # application and launch that using the open command.  On other
+        # platforms we'll build a xulrunner application (directory) and
+        # invoke xulrunner-bin pointing at that. 
 
-    if command == 'xpi':
-        from cuddlefish.xpi import build_xpi
-        from cuddlefish.zip import build_zip
-        from cuddlefish.rdf import gen_manifest, RDFUpdate
-
-        manifest = gen_manifest(template_root_dir=app_extension_dir,
-                                target_cfg=target_cfg,
-                                bundle_id=bundle_id,
-                                update_url=options.update_url,
-                                bootstrap=True)
-
-        if options.update_link:
-            rdf_name = UPDATE_RDF_FILENAME % target_cfg.name
-            print "Exporting update description to %s." % rdf_name
-            update = RDFUpdate()
-            update.add(manifest, options.update_link)
-            open(rdf_name, "w").write(str(update))
-
-        xpi_name = XPI_FILENAME % target_cfg.name
-        print "Exporting extension to %s." % xpi_name
-        build_zip(template_root_dir=app_extension_dir,
-                  manifest=manifest,
-                  xpi_name=xpi_name,
-                  harness_options=harness_options,
-                  xpts=xpts)
-    else:
-        if options.use_server:
-            from cuddlefish.server import run_app
-        else:
-            from cuddlefish.runner import run_app
+        browser_code_path = json.loads(options.static_args)["browser"]
 
         if options.profiledir:
             options.profiledir = os.path.expanduser(options.profiledir)
             options.profiledir = os.path.abspath(options.profiledir)
 
-        if options.addons is not None:
-            options.addons = options.addons.split(",")
+        if (platform.system() == 'Darwin'): 
+            # because of the manner in which we run the application, we must use a
+            # temporary file to enable console output
+            [fd, tmppath] = tempfile.mkstemp()
+            os.close(fd)
 
-        try:
-            retval = run_app(harness_root_dir=app_extension_dir,
-                             harness_options=harness_options,
-                             xpts=xpts,
-                             app_type=options.app,
-                             binary=options.binary,
-                             profiledir=options.profiledir,
-                             verbose=options.verbose,
-                             timeout=timeout,
-                             logfile=options.logfile,
-                             addons=options.addons)
-        except Exception, e:
-            if e.message.startswith(MOZRUNNER_BIN_NOT_FOUND):
-                print >>sys.stderr, MOZRUNNER_BIN_NOT_FOUND_HELP.strip()
-                retval = -1
-            else:
-                raise
-    sys.exit(retval)
+            print "logging to '%s'" % tmppath
+            harness_options['logFile'] = tmppath
+            standalone_app_dir = a.output_application(browser_code=browser_code_path,
+                                                      harness_options=harness_options,
+                                                      dev_mode=True)
+            print "opening '%s'" % standalone_app_dir
+
+            tailProcess = None
+            try:
+                tailProcess = subprocess.Popen(["tail", "-f", tmppath])
+                retval = subprocess.call(["open", "-W", standalone_app_dir])
+            except KeyboardInterrupt:
+                print "got ^C, exiting..."
+                killProcessByName(standalone_app_dir)
+            finally:
+                tailProcess.terminate()
+                os.remove(tmppath)
+        else:
+            xul_app_dir = a.output_xul_app(browser_code=browser_code_path,
+                                           harness_options=harness_options,
+                                           dev_mode=True)
+
+            from cuddlefish.runner import run_app
+
+            if options.addons is not None:
+                options.addons = options.addons.split(",")
+
+            try:
+                retval = run_app(harness_root_dir=xul_app_dir,
+                                 harness_options=harness_options,
+                                 xpts=xpts,
+                                 app_type=options.app,
+                                 binary=options.binary,
+                                 profiledir=options.profiledir,
+                                 verbose=options.verbose,
+                                 timeout=timeout,
+                                 logfile=options.logfile,
+                                 addons=options.addons)
+            except Exception, e:
+                if e.message.startswith(MOZRUNNER_BIN_NOT_FOUND):
+                    print >>sys.stderr, MOZRUNNER_BIN_NOT_FOUND_HELP.strip()
+                    retval = -1
+                else:
+                    raise
+        sys.exit(retval)
