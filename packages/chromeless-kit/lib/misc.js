@@ -37,25 +37,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/**
- * My module description
- * @module misc
- */
-
-/**
- * My class description
- * @class Misc
- */
-
 const {Cc, Ci} = require("chrome");
 var mainWin = require("window-utils");
 
-
-/**
- * My method description
- * @method fullscreen
- * @param {bool} fake this is a fake parameter
- */
 exports.fullscreen = function flipFullScreen() {
    mainWin.activeWindow.fullScreen=!mainWin.activeWindow.fullScreen;
 }
@@ -63,3 +47,10 @@ exports.fullscreen = function flipFullScreen() {
 exports.fixupuri = function fixUpURI(url) { 
    return Cc["@mozilla.org/docshell/urifixup;1"].getService(Ci.nsIURIFixup).createFixupURI(url,0).spec;;
 } 
+
+exports.setDragData = function setDragData(e,file) { 
+   e.dataTransfer.mozSetDataAt("application/x-moz-file", file, 0);
+   e.dataTransfer.effectAllowed="all";
+} 
+
+
