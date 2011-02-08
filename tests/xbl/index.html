@@ -1,0 +1,45 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+ "http://www.w3.org/TR/html401/strict.dtd">
+<html>
+<head>
+<title>XBL Demo : Sticky Notes</title>
+<meta http-equiv="Content-Type"
+ content="text/html; charset=iso-8859-1">
+<style>
+browser { 
+ -moz-binding:url(chrome://extras/content/browser.xml#default)
+} 
+</style>
+<script>
+ 	
+	function setup() { 
+
+                var bro = document.getElementById("mybrowser");
+
+                bro.src="http://www.google.com";
+
+		document.getElementById("mybrowser").addEventListener("experimental-dom-progress", function (e) { 
+			document.getElementById("show").value = e.percentage ;
+			updateTitle();
+		}, false);
+
+ 	} 
+
+  	function updateTitle() { 
+                var bro = document.getElementById("mybrowser");
+		document.getElementById("show").value = bro.title;
+  	} 
+
+</script>
+</head>
+
+<body onload='setup()'>
+<h1>Browser tag demo</h1>
+
+<input id="show" type="text" size="100" />
+
+<browser id="mybrowser" />
+
+</body>
+</html>
+

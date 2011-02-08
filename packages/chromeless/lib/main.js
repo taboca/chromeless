@@ -96,14 +96,12 @@ exports.main = function main(options) {
   // convert browser url into a file url
   var startPage = require('url').fromFilename(call.appBasePath);
   // remove trailing slashes first
-  startPage = startPage.replace(/[\/]+$/, "") + "/" + call.browser;
+//  startPage = startPage.replace(/[\/]+$/, "") + "/" + call.browser;
 
-/* to make it system priviledged 
     var protocol = require("custom-protocol").register("chromeless");
     protocol.setHost("main", startPage , "system");
     var contentWindow = require("chromeless-sandbox-window");
     var startPage = "chromeless://main/" + call.browser;
-*/
 
   console.log("Loading browser using = " + startPage);
 

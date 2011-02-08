@@ -1,0 +1,107 @@
+<?xml version="1.0"?>
+
+<!-- we may have to check the xhtml versus html5 --> 
+
+<bindings
+ xmlns="http://www.mozilla.org/xbl"
+ xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+ xmlns:html="http://www.w3.org/1999/xhtml"
+ xmlns:svg="http://www.w3.org/2000/svg"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+
+<binding id="default">
+
+<resources>
+ <stylesheet src="chrome://extras/content/browser.css"/>
+</resources>
+
+<content><html:iframe anonid="innerframe" /><children/></content>
+
+<implementation>
+
+<constructor><![CDATA[
+/**
+ * The code below will be called one time only after
+ * the binding is successfully prepared and bound.
+ * "this" in this context refers to the bound element.
+ */
+
+ // your code goes here
+ var refIframe = document.getAnonymousElementByAttribute(this, "anonid", "innerframe") 
+  
+ require("iframe-as-browser").bind(refIframe, document);
+
+ refIframe.addEventListener("experimental-dom-progress",
+         function (e) {
+             var percentage = e.percentage;
+
+    var evt = document.createEvent("HTMLEvents");
+    evt.initEvent("experimental-dom-progress", true, false);
+    evt.percentage = percentage;
+    this.dispatchEvent(evt);
+
+         }
+ ,false);
+
+]]></constructor>
+
+<destructor><![CDATA[
+/**
+ * The code below will be called one time only before
+ * binding is unbound. You cannot cancel this event,
+ * but you may accomplish some last minute clean up.
+ * "this" in this context refers to the bound element.
+ */
+
+ // your code goes here
+
+]]></destructor>
+
+<property name="src">
+
+<setter><![CDATA[
+ var refIframe = document.getAnonymousElementByAttribute(this, "anonid", "innerframe") 
+ refIframe.src=val;
+]]></setter>
+
+</property>
+
+<property name="title">
+<!--
+ New "virtual" property for the bound element.
+ Unlike <field> these are really two functions
+ (getter and setter). Within the virtual properties
+ you cannot set or get the named property itself.
+ Say an attempt to assign this.innerText='something'
+ will lead to circular setter call and stack overflow.
+-->
+
+<getter><![CDATA[
+
+ var refIframe = document.getAnonymousElementByAttribute(this, "anonid", "innerframe") 
+ return refIframe.contentDocument.title;
+]]></getter>
+
+<setter><![CDATA[
+
+]]></setter>
+
+</property>
+
+
+</implementation>
+
+<handlers>
+<!--
+ Event handlers.
+ Mouse events sent to bindings are refactored, so
+ event.target / event.relatedTarget always points
+ to the bound element, even if it was originated
+ to/from a child.
+-->
+
+</handlers>
+
+ </binding>
+</bindings>
+
